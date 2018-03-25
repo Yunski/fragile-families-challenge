@@ -78,7 +78,7 @@ def feature_selection(X, Y, outcome, method, imp_method, data_dir, verbose=0) :
                     X_train, Y_train = X_sub[train_index], Y[train_index]
                     X_test, Y_test = X_sub[test_index], Y[test_index]
                     model.fit(X_train, Y_train)
-                    Y_pred = model.predict(X_test)
+                    Y_pred = model.predict_proba(X_test)[:,1]
                     losses.append(brier_score_loss(Y_test, Y_pred))
                 mean_loss = np.mean(losses)
                 if best_loss > mean_loss:
