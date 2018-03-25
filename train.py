@@ -37,9 +37,9 @@ def train(classifier, X, Y, is_classf, cv=10):
             model = AdaBoostRegressor(estimator, n_estimators=100)
     elif classifier == 'RandomForest':
         if is_classf:
-            model = RandomForestClassifier(n_estimators=100)
+            model = RandomForestClassifier(n_estimators=50)
         else:
-            model = RandomForestRegressor(n_estimators=100)
+            model = RandomForestRegressor(n_estimators=50)
     elif classifier == 'GP':
         if is_classf:
             model = GaussianProcessClassifier()
@@ -81,18 +81,12 @@ def train(classifier, X, Y, is_classf, cv=10):
     print("Bootstrapping...B)")
     bs_losses = []
     for i in range(10):
-        print("Sample {}".format(i))
-        data = np.hstack((np.arange(len(X)), X, Y.reshape(len(Y), 1)))
+        print("Sample {}".format(i+1))
+        data = np.hstack((np.arange(len(X)).reshape(len(X), 1), X, Y.reshape(len(Y), 1)))
         train = resample(data, n_samples=int(0.7*len(X)))
-        print(train.shape)
-        train_ids = set(train[:,0])
+        train_ids = set(train[:,0].astype(np.int64))
         train = train[:,1:]
-        print(train.shape)
-        print(train_ids)
         test = np.array([sample[1:] for sample in data if sample[0] not in train_ids])
-        test_ids = set(test[:,0])
-        print(test.shape)
-        assert(bool(train_ids & test_ids))
         X_train, Y_train = train[:,:-1], train[:,-1]
         X_test, Y_test = test[:,:-1], test[:,-1]
         model.fit(X_train, Y_train)
