@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 
+from feature_selection import feature_selection
 from train import train
 from utils import get_data
 

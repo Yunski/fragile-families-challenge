@@ -40,9 +40,9 @@ def train(classifier, X, Y, is_classf, outcome, fs_method, imp_method,
             model = RandomForestRegressor(n_estimators=50)
     elif classifier == 'GP':
         if is_classf:
-            model = GaussianProcessClassifier()
+            model = GaussianProcessClassifier(normalize_y=True, n_restarts_optimizer=9)
         else:
-            model = GaussianProcessRegressor() 
+            model = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=9) 
     elif classifier == 'SVM':
         if is_classf:
             model = SVC(kernel='linear', probability=True)
