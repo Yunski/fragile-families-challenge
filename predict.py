@@ -17,7 +17,8 @@ if __name__ == '__main__':
     fs_methods = [None, 'PCA', 'ElasticNet', 'Lasso', 'RFE', 'ANOVA']
     outcomes = ['gpa', 'grit', 'materialHardship', 'eviction', 'layoff', 'jobTraining']
     models = ['Lasso', 'AdaBoost', 'RandomForest', 'GP', 'SVM']
-    fs_models = models.copy().remove('Lasso') 
+    fs_models = models.copy()
+    fs_models.remove('Lasso') 
 
     for outcome in outcomes:    
         features_path = 'features_{}_{}.csv'.format(outcome, args.imp_method)
