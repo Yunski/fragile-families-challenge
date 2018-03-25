@@ -5,7 +5,7 @@ import os
 import scipy
 import time
 
-from sklearn.ensemble import AdaBoostClassifier, AdaBoostRegressor
+from sklearn.ensemble import AdaBoostClassifier, AdaBoostRegressor, RandomForestClassifier, RandomForestRegressor
 from sklearn.gaussian_process import GaussianProcessClassifier, GaussianProcessRegressor
 from sklearn.linear_model import SGDClassifier, SGDRegressor
 from sklearn.metrics import brier_score_loss, mean_squared_error
@@ -35,6 +35,11 @@ def train(classifier, X, Y, is_classf, cv=10):
         else: 
             estimator = DecisionTreeRegressor(max_depth=1)
             model = AdaBoostRegressor(estimator, n_estimators=100)
+    elif classifier == 'RandomForest':
+        if is_classf:
+            model = RandomForestClassifier(n_estimators=100)
+        else:
+            model = RandomForestRegressor(n_estimators=100)
     elif classifier == 'GP':
         if is_classf:
             model = GaussianProcessClassifier()
@@ -50,6 +55,7 @@ def train(classifier, X, Y, is_classf, cv=10):
 
     metric = brier_score_loss if is_classf else mean_squared_error
     metric_str = 'brier_loss' if is_classf else 'mse'
+    predict = model.predict_proba if is_classf else model.predict
     print("Training {}...".format(classifier))
     print("10-Fold cross validation...")
     start = time.time()
@@ -62,7 +68,9 @@ def train(classifier, X, Y, is_classf, cv=10):
         X_train, Y_train = X[train_index], Y[train_index]
         X_test, Y_test = X[test_index], Y[test_index] 
         model.fit(X_train, Y_train)
-        Y_pred = model.predict(X_test)
+        Y_pred = predict(X_test)
+        if len(Y_pred.shape) > 1:
+            Y_pred = Y_pred[:,1]
         losses.append(metric(Y_test, Y_pred))
     mean_loss = np.mean(losses)
 
@@ -74,13 +82,23 @@ def train(classifier, X, Y, is_classf, cv=10):
     bs_losses = []
     for i in range(10):
         print("Sample {}".format(i))
-        data = np.hstack((X, Y.reshape(len(Y), 1)))
+        data = np.hstack((np.arange(len(X)), X, Y.reshape(len(Y), 1)))
         train = resample(data, n_samples=int(0.7*len(X)))
-        test = np.array([sample for sample in data if sample.tolist() not in train.tolist()])
+        print(train.shape)
+        train_ids = set(train[:,0])
+        train = train[:,1:]
+        print(train.shape)
+        print(train_ids)
+        test = np.array([sample[1:] for sample in data if sample[0] not in train_ids])
+        test_ids = set(test[:,0])
+        print(test.shape)
+        assert(bool(train_ids & test_ids))
         X_train, Y_train = train[:,:-1], train[:,-1]
         X_test, Y_test = test[:,:-1], test[:,-1]
         model.fit(X_train, Y_train)
-        Y_pred = model.predict(X_test)
+        Y_pred = predict(X_test)
+        if len(Y_pred.shape) > 1:
+            Y_pred = Y_pred[:,1]
         bs_losses.append(metric(Y_test, Y_pred))
     mean_loss = np.mean(bs_losses)
     n = len(bs_losses)
@@ -109,7 +127,7 @@ if __name__ == '__main__':
     print("Successfully loaded dataset.")
     if args.fs_method:
         print("Performing feature selection using {}...".format(args.fs_method))
-        X = feature_selection(X, Y, args.outcome, args.fs_method, args.data_dir, verbose=True)
+        X = feature_selection(X, Y, args.outcome, args.fs_method, args.imp_method, args.data_dir, verbose=1)
     print("X dim: {}".format(X.shape))
     train(args.model, X, Y, is_classf)
 
