@@ -21,6 +21,12 @@ from utils import get_data
 
 def train(classifier, X, Y, is_classf, outcome, fs_method, imp_method, 
     data_dir, results_dir, cv=10, verbose=0):
+    results_path = os.path.join(results_dir, 
+        'score_{}-{}-{}-{}.json'.format(classifier, outcome, fs_method, imp_method))
+    if os.path.exists(results_path):
+        if verbose:
+            print("Model already trained. See {}".format(results_path))
+        return
     if classifier == 'Lasso':
         if is_classf:
             model = LogisticRegression(penalty='l1')
@@ -104,8 +110,7 @@ def train(classifier, X, Y, is_classf, outcome, fs_method, imp_method,
         print("\nbootstrap mean {}: {:.4f}".format(metric_str, mean_loss))
         print("95% confidence interval: [{:.4f}, {:.4f}]".format(lower, upper))
 
-    with open(os.path.join(results_dir, 'score_{}-{}-{}-{}.json'.format(classifier, outcome, 
-        fs_method, imp_method)), 'w') as f: 
+    with open(results_path, 'w') as f: 
         json.dump(scores, f)
         if verbose:
             print("Successfully saved scores.")
