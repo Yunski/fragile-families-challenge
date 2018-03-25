@@ -11,11 +11,11 @@ from sklearn.externals import joblib
 from sklearn.feature_selection import SelectKBest, SelectFromModel, f_classif, RFECV
 from sklearn.metrics import brier_score_loss
 from sklearn.model_selection import KFold
-from sklearn.linear_model import LassoCV, LogisticRegression
+from sklearn.linear_model import ElasticNetCV, LassoCV, LogisticRegression
 from sklearn.svm import LinearSVR, LinearSVC
 
 def feature_selection(X, Y, outcome, method, imp_method, data_dir, verbose=0) :
-    if method not in ['ANOVA', 'RFE', 'Lasso', 'PCA']:
+    if method not in ['ANOVA', 'RFE', 'Lasso', 'PCA', 'ElasticNet']:
         raise Exception("{} not supported.".format(method))
 
     is_classf = Y.dtype == np.int8
@@ -38,6 +38,9 @@ def feature_selection(X, Y, outcome, method, imp_method, data_dir, verbose=0) :
             X_refined = selector.fit_transform(X, Y)
         elif method == 'Lasso':
             selector = SelectFromModel(LassoCV(cv=10, n_jobs=-1))
+            X_refined = selector.fit_transform(X, Y)
+        elif method == 'ElasticNet':
+            selector = SelectFromModel(ElasticNetCV(cv=10, n_jobs=-1))
             X_refined = selector.fit_transform(X, Y)
         elif method == 'PCA':
             selector = None

@@ -1,33 +1,31 @@
 import argparse
+import json
 import numpy as np
 import pandas as pd
 import os
+import sys
 import scipy
 import time
 
 from sklearn.ensemble import AdaBoostClassifier, AdaBoostRegressor, RandomForestClassifier, RandomForestRegressor
 from sklearn.gaussian_process import GaussianProcessClassifier, GaussianProcessRegressor
-from sklearn.linear_model import SGDClassifier, SGDRegressor
+from sklearn.linear_model import ElasticNet, Lasso, LogisticRegression
 from sklearn.metrics import brier_score_loss, mean_squared_error
 from sklearn.model_selection import KFold
-from sklearn.svm import LinearSVR, LinearSVC 
+from sklearn.svm import LinearSVR, SVC 
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import resample
 
 from feature_selection import feature_selection
 from utils import get_data
 
-def train(classifier, X, Y, is_classf, cv=10):
-    if classifier == 'ElasticNet':
+def train(classifier, X, Y, is_classf, outcome, fs_method, imp_method, 
+    data_dir, results_dir, cv=10, verbose=0):
+    if classifier == 'Lasso':
         if is_classf:
-            model = SGDClassifier(loss='log', penalty='elasticnet')
+            model = LogisticRegression(penalty='l1')
         else:
-            model = SGDRegressor(penalty='elasticnet')
-    elif classifier == 'Lasso':
-        if is_classf:
-            model = SGDClassifier(loss='log', penalty='l1')
-        else:
-            model = SGDClassifier(penalty='l1')
+            model = Lasso()
     elif classifier == 'AdaBoost':
         if is_classf:
             estimator = DecisionTreeClassifier(max_depth=1) 
@@ -47,41 +45,43 @@ def train(classifier, X, Y, is_classf, cv=10):
             model = GaussianProcessRegressor() 
     elif classifier == 'SVM':
         if is_classf:
-            model = LinearSVC()
+            model = SVC(kernel='linear', probability=True)
         else:
             model = LinearSVR()
     else:
         raise ValueError("model {} not available".format(classifier))
 
+    scores = {}
     metric = brier_score_loss if is_classf else mean_squared_error
     metric_str = 'brier_loss' if is_classf else 'mse'
-    predict = model.predict_proba if is_classf else model.predict
-    print("Training {}...".format(classifier))
-    print("10-Fold cross validation...")
+    if verbose:
+        print("Training {}...".format(classifier))
+        print("10-Fold cross validation...")
     start = time.time()
 
     kf = KFold(n_splits=cv)
     kf.get_n_splits(X)
     losses = []
     for i, (train_index, test_index) in enumerate(kf.split(X)):
-        print("Fold {}".format(i+1))
+        if verbose:
+            sys.stdout.write("\rFold {}/{}".format(i+1, cv))
         X_train, Y_train = X[train_index], Y[train_index]
         X_test, Y_test = X[test_index], Y[test_index] 
         model.fit(X_train, Y_train)
-        Y_pred = predict(X_test)
-        if len(Y_pred.shape) > 1:
-            Y_pred = Y_pred[:,1]
+        Y_pred = model.predict_proba(X_test)[:,1] if is_classf else model.predict(X_test)
         losses.append(metric(Y_test, Y_pred))
     mean_loss = np.mean(losses)
+    scores['cv_{}'.format(metric_str)] = mean_loss
 
     total = int(time.time()-start)
-    print("Training took {}m{}s.".format(total // 60, total % 60))
-    print("cv mean {}: {:.4f}".format(metric_str, mean_loss))
-
-    print("Bootstrapping...B)")
+    if verbose:
+        print("\nTraining took {}m{}s.".format(total // 60, total % 60))
+        print("cv mean {}: {:.4f}".format(metric_str, mean_loss))
+        print("Bootstrapping...B)")
     bs_losses = []
-    for i in range(10):
-        print("Sample {}".format(i+1))
+    for i in range(cv):
+        if verbose:
+            sys.stdout.write("\rSample {}/{}".format(i+1, cv))
         data = np.hstack((np.arange(len(X)).reshape(len(X), 1), X, Y.reshape(len(Y), 1)))
         train = resample(data, n_samples=int(0.7*len(X)))
         train_ids = set(train[:,0].astype(np.int64))
@@ -90,16 +90,25 @@ def train(classifier, X, Y, is_classf, cv=10):
         X_train, Y_train = train[:,:-1], train[:,-1]
         X_test, Y_test = test[:,:-1], test[:,-1]
         model.fit(X_train, Y_train)
-        Y_pred = predict(X_test)
-        if len(Y_pred.shape) > 1:
-            Y_pred = Y_pred[:,1]
+        Y_pred = model.predict_proba(X_test)[:,1] if is_classf else model.predict(X_test)
         bs_losses.append(metric(Y_test, Y_pred))
     mean_loss = np.mean(bs_losses)
     n = len(bs_losses)
-    print("bootstrap mean {}: {:.4f}".format(metric_str, mean_loss))
     lower = mean_loss - 1.96*np.std(bs_losses)/np.sqrt(n)
     upper = mean_loss + 1.96*np.std(bs_losses)/np.sqrt(n)
-    print("95% confidence interval: [{:.4f}, {:.4f}]".format(lower, upper))
+    scores['bootstrap_{}'.format(metric_str)] = mean_loss
+    scores['bootstrap_95_lower'] = lower
+    scores['bootstrap_95_upper'] = upper
+
+    if verbose:
+        print("\nbootstrap mean {}: {:.4f}".format(metric_str, mean_loss))
+        print("95% confidence interval: [{:.4f}, {:.4f}]".format(lower, upper))
+
+    with open(os.path.join(results_dir, 'score_{}-{}-{}-{}.json'.format(classifier, outcome, 
+        fs_method, imp_method)), 'w') as f: 
+        json.dump(scores, f)
+        if verbose:
+            print("Successfully saved scores.")
 
 
 if __name__ == '__main__':
@@ -110,6 +119,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', dest='outcome', help="outcome (i.e. gpa)")
     parser.add_argument('-k', dest='k', help="k", type=int, default='100')
     parser.add_argument('-d', dest='data_dir', help='data directory', default='data')
+    parser.add_argument('-s', dest='results_dir', help='results directory', default='results')
     args = parser.parse_args()
 
     features_path = 'features_{}_{}.csv'.format(args.outcome, args.imp_method)
@@ -123,5 +133,6 @@ if __name__ == '__main__':
         print("Performing feature selection using {}...".format(args.fs_method))
         X = feature_selection(X, Y, args.outcome, args.fs_method, args.imp_method, args.data_dir, verbose=1)
     print("X dim: {}".format(X.shape))
-    train(args.model, X, Y, is_classf)
-
+    train(args.model, X, Y, is_classf, args.outcome, args.fs_method, 
+        args.imp_method, args.data_dir, args.results_dir, verbose=1)    
+    
