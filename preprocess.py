@@ -71,18 +71,8 @@ def preprocess(method, data_dir, force):
         print(X.shape)         
 
         df_impute = pd.DataFrame(X, columns=df.columns[selector.get_support()])
-        #constants_idx = [i for i, col in enumerate(df_impute.columns) if df_impute[col].std() == 0]
-        #df_impute.drop(df_impute.columns[constants_idx], axis=1, inplace=True)  
 
         print("Convert ints to categorical variables.")
-        #int_columns = set([col for col in df_impute.columns if o_dtypes[col].name == 'int64'])
-        #progress_bar = tqdm(df_impute.columns, total=len(df_impute.columns), ncols=70, leave=False, unit='b')
-        #progress_bar = tqdm(int_columns, total=len(int_columns), ncols=70, leave=False, unit='b')
-        #for col in progress_bar:
-            #if col in int_columns:
-        #    df_impute[col] = df_impute[col].astype('category')    
-            #else:
-                #df_impute[col] = (df_impute[col] - df_impute[col].mean()) / df_impute[col].std()
         category_idx = [o_dtypes[col].name == 'int64' for col in df_impute.columns]
         category_idx = np.array(category_idx and df_impute.apply(lambda x: x.nunique() <= 5, axis=0).tolist())
         categories = df_impute.iloc[:,category_idx]
