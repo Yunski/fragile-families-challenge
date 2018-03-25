@@ -31,6 +31,8 @@ if __name__ == '__main__':
         
         for fs_method in fs_methods:
             if fs_method:
+                if fs_method == 'ANOVA' and not is_classf:
+                    continue
                 print("Performing feature selection using {}...".format(fs_method))
                 use_full_data = False
                 X = feature_selection(X, Y, outcome, fs_method, args.imp_method, args.data_dir, verbose=1)
