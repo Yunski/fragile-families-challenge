@@ -62,10 +62,12 @@ def feature_selection(X, Y, outcome, method, imp_method, data_dir, verbose=0) :
         else:
             if not is_classf:
                 raise Exception("ANOVA only for classification")
-            k_list = [5, 10, 15, 20, 25, 30]
+            k_list = np.array(list(range(1, 10)) + [15, 20, 25, 30])
             selector = None
             best_loss = float('inf')
             for k in k_list:
+                if k > X.shape[1]:
+                    break
                 kf = KFold(n_splits=5)
                 kf.get_n_splits(X)
                 losses = []
