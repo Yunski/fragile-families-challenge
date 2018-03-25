@@ -38,7 +38,7 @@ def feature_selection(X, Y, outcome, method, data_dir, verbose=False) :
             selector = SelectFromModel(LassoCV(cv=10, n_jobs=-1))
             X_refined = selector.fit_transform(X, Y)
         elif method == 'PCA':
-            pca_path = os.path.join(data_dir, 'pca_comp_{}_{}.pkl'.format(outcome, method)) 
+            pca_path = os.path.join(data_dir, 'pca_comp_{}.pkl'.format(outcome)) 
             if os.path.exists(pca_path):
                 pca = joblib.load(pca_path)
                 X_refined = pca.transform(X)
