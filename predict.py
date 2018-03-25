@@ -21,6 +21,7 @@ if __name__ == '__main__':
     fs_models.remove('Lasso') 
 
     for outcome in outcomes:    
+        print("Generating results for {}".format(outcome))
         features_path = 'features_{}_{}.csv'.format(outcome, args.imp_method)
         labels_path = 'labels_{}_{}.csv'.format(outcome, args.imp_method)
 
