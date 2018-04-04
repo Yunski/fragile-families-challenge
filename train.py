@@ -8,11 +8,10 @@ import scipy
 import time
 
 from sklearn.ensemble import AdaBoostClassifier, AdaBoostRegressor, RandomForestClassifier, RandomForestRegressor
-from sklearn.gaussian_process import GaussianProcessClassifier, GaussianProcessRegressor
-from sklearn.linear_model import ElasticNet, Lasso, LogisticRegression
+from sklearn.linear_model import RidgeCV, RidgeClassifierCV, Ridge, RidgeClassifier, LinearRegression, LogisticRegression
 from sklearn.metrics import brier_score_loss, mean_squared_error
 from sklearn.model_selection import KFold
-from sklearn.svm import LinearSVR, SVC 
+from sklearn.svm import SVR, SVC 
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import resample
 
@@ -27,11 +26,24 @@ def train(classifier, X, Y, is_classf, outcome, fs_method, imp_method,
         if verbose:
             print("Model already trained. See {}".format(results_path))
         return
-    if classifier == 'Lasso':
+    if classifier == 'Linear':
         if is_classf:
-            model = LogisticRegression(penalty='l1')
+            model = LogisticRegression()
         else:
-            model = Lasso()
+            model = LinearRegression()
+    elif classifier == 'Ridge':
+        if is_classf:
+            model = RidgeClassifierCV(alphas=(1e-3, 1e-2, 1e-1, 1, 10, 100))
+        else:
+            model = RidgeCV(alphas=(1e-3, 1e-2, 1e-1, 1, 10, 100))
+        print("Finding best alpha...")
+        model.fit(X, Y)
+        best_alpha = model.alpha_
+        print("Best alpha: {}".format(model.alpha_))
+        if is_classf:
+            model = RidgeClassifier(alpha=best_alpha) 
+        else:
+            model = Ridge(alpha=best_alpha) 
     elif classifier == 'AdaBoost':
         if is_classf:
             estimator = DecisionTreeClassifier(max_depth=1) 
@@ -44,16 +56,11 @@ def train(classifier, X, Y, is_classf, outcome, fs_method, imp_method,
             model = RandomForestClassifier(n_estimators=50)
         else:
             model = RandomForestRegressor(n_estimators=50)
-    elif classifier == 'GP':
-        if is_classf:
-            model = GaussianProcessClassifier(n_restarts_optimizer=9)
-        else:
-            model = GaussianProcessRegressor(normalize_y=True, n_restarts_optimizer=9) 
     elif classifier == 'SVM':
         if is_classf:
             model = SVC(kernel='linear', probability=True)
         else:
-            model = LinearSVR()
+            model = SVR(kernel='linear')
     else:
         raise ValueError("model {} not available".format(classifier))
 
@@ -74,7 +81,11 @@ def train(classifier, X, Y, is_classf, outcome, fs_method, imp_method,
         X_train, Y_train = X[train_index], Y[train_index]
         X_test, Y_test = X[test_index], Y[test_index] 
         model.fit(X_train, Y_train)
-        Y_pred = model.predict_proba(X_test)[:,1] if is_classf else model.predict(X_test)
+        if classifier == 'Ridge' and is_classf:
+            d = model.decision_function(X_test)
+            Y_pred = np.exp(d) / (1 + np.exp(d))
+        else:
+            Y_pred = model.predict_proba(X_test)[:,1] if is_classf else model.predict(X_test)
         losses.append(metric(Y_test, Y_pred))
     mean_loss = np.mean(losses)
     scores['cv_{}'.format(metric_str)] = mean_loss
@@ -96,7 +107,12 @@ def train(classifier, X, Y, is_classf, outcome, fs_method, imp_method,
         X_train, Y_train = train[:,:-1], train[:,-1]
         X_test, Y_test = test[:,:-1], test[:,-1]
         model.fit(X_train, Y_train)
-        Y_pred = model.predict_proba(X_test)[:,1] if is_classf else model.predict(X_test)
+        if classifier == 'Ridge' and is_classf:
+            # from https://stackoverflow.com/questions/22538080/scikit-learn-ridge-classifier-extracting-class-probabilities
+            d = model.decision_function(X_test)
+            Y_pred = np.exp(d) / (1 + np.exp(d))
+        else:
+            Y_pred = model.predict_proba(X_test)[:,1] if is_classf else model.predict(X_test)
         bs_losses.append(metric(Y_test, Y_pred))
     mean_loss = np.mean(bs_losses)
     n = len(bs_losses)
@@ -117,12 +133,11 @@ def train(classifier, X, Y, is_classf, outcome, fs_method, imp_method,
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Sentiment Analysis")
+    parser = argparse.ArgumentParser(description="Fragile Families Train Script")
     parser.add_argument('model', help="model")
-    parser.add_argument('-i', dest='imp_method', help="imputation method")
-    parser.add_argument('-m', dest='fs_method', help="feature selection method")
-    parser.add_argument('-o', dest='outcome', help="outcome (i.e. gpa)")
-    parser.add_argument('-k', dest='k', help="k", type=int, default='100')
+    parser.add_argument('outcome', help="outcome")
+    parser.add_argument('-i', dest='imp_method', help="imputation method", default='KNN')
+    parser.add_argument('-m', dest='fs_method', help="feature selection method", default='ElasticNet')
     parser.add_argument('-d', dest='data_dir', help='data directory', default='data')
     parser.add_argument('-s', dest='results_dir', help='results directory', default='results')
     args = parser.parse_args()

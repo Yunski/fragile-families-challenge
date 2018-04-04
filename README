@@ -1,0 +1,40 @@
+----------------------------------------------
+COS 424: Fragile Families Challenge (Spring 2018)
+Yowan Ramchoreeter (yowanr), Yun Teng (yteng)
+----------------------------------------------
+
+This directory contains the following files:
+- data.py
+- environment.yml
+- plot_curves.py
+- preprocessSentences.py
+- sentiment_analysis.py
+- sentiment_analysis_split.py
+- utils.py
+
+Create the conda environment with:
+$ conda env create -f environment.yml
+
+To train the models, run sentiment_analysis.py.
+
+The 'products' dataset is the provided dataset. 
+Train and test csvs were generated using preprocessSentences.py.
+
+The 'imdb' dataset is from the Stanford Large Movie Review Dataset. 
+Download link: http://ai.stanford.edu/~amaas/data/sentiment/
+
+Sentiment Analysis
+
+positional arguments:
+  model           model {BernoulliNB, MultinomialNB, Logistic, SVM, 
+                         LinearSVM, AdaBoost}
+
+optional arguments:
+  -d DATASET      dataset {products, imdb}
+  -x FEATURE_REP  feature representation {bow, tfidf, bigram}
+  -p DATA_DIR     data directory
+  -s SAVE_DIR     saved results directory
+
+Example:
+$ python sentiment_analysis.py BernoulliNB -d products -p path/to/products -x bow 
+

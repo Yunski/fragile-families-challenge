@@ -21,7 +21,7 @@ def preprocess(method, data_dir, force):
         with h5py.File(os.path.join(data_dir, 'data_{}.h5'.format(method)), 'r') as hf:
             X = hf['data_{}'.format(method)][:]
         with open(os.path.join(data_dir, 'data_columns_{}'.format(method)), 'r') as f:
-            columns = f.read().split(',')
+            columns = np.array(f.read().split(','))
     else:
         print("Reading data...")
         df = pd.read_csv(os.path.join(data_dir, 'background.csv'), low_memory=False)
@@ -98,17 +98,26 @@ def preprocess(method, data_dir, force):
     Y = df_Y.as_matrix()
     for col in range(1, Y.shape[1]):
         label = df_Y.columns[col]
-        print("Generating feature and label csvs for {}...".format(label))
+        print("Generating train/test feature and label csvs for {}...".format(label))
         Y_cur = Y[:,col] 
         non_na = np.isfinite(Y_cur)    
         idx = challengeIds[non_na]
-        selector = VarianceThreshold()
+        selected_rows = np.arange(len(X))[idx]
+        selected_rows = pd.DataFrame(selected_rows, columns=['challengeID'])
+        #selected_rows.to_csv(os.path.join(data_dir, 'ids_{}_{}.csv'.format(label, method)), index=False)
+      
         X_cur = X[idx]
+        selector = VarianceThreshold() 
         X_cur = selector.fit_transform(X_cur)
+        """ 
         features = pd.DataFrame(X_cur, columns=columns[selector.get_support()])
         features.to_csv(os.path.join(data_dir, 'features_{}_{}.csv'.format(label, method)), index=False)
         labels = pd.DataFrame(Y_cur[non_na], columns=[label])
         labels.to_csv(os.path.join(data_dir, 'labels_{}_{}.csv'.format(label, method)), index=False)
+        """
+        X_test = X[len(X)//2:,selector.get_support()]
+        test = pd.DataFrame(X_test, columns=columns[selector.get_support()])
+        test.to_csv(os.path.join(data_dir, 'test_features_{}_{}.csv'.format(label, method)), index=False)
 
 
 if __name__ == '__main__':

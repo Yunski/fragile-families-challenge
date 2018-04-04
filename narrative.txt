@@ -1,0 +1,20 @@
+Yun Teng
+yteng@princeton.edu
+
+Yowan Ramchoreeter
+yowanr@princeton.edu
+
+Preprocessing consisted of removing constants, NAs, and treating all 
+negative values as missing data. 
+Data imputation was done by mode imputing and KNN imputing. 
+Categorical variables were converted to indicator variables and
+continuous variables were normalized.
+
+ElasticNet and RFE were used for feature selection, and PCA was used for
+dimensionality reduction.
+
+Models used include OLS, Logistic Regression, Ridge, AdaBoost, 
+Random Forest, and SVM. 
+
+We found that for 4/6 outcomes, Linear/Logistic Regression trained on 
+features selected by ElasticNet performed the best.
