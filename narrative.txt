@@ -1,7 +1,7 @@
-Yun Teng
+Yun Teng,
 yteng@princeton.edu
 
-Yowan Ramchoreeter
+Yowan Ramchoreeter,
 yowanr@princeton.edu
 
 Preprocessing consisted of removing constants, NAs, and treating all 

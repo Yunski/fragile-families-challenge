@@ -104,17 +104,15 @@ def preprocess(method, data_dir, force):
         idx = challengeIds[non_na]
         selected_rows = np.arange(len(X))[idx]
         selected_rows = pd.DataFrame(selected_rows, columns=['challengeID'])
-        #selected_rows.to_csv(os.path.join(data_dir, 'ids_{}_{}.csv'.format(label, method)), index=False)
+        selected_rows.to_csv(os.path.join(data_dir, 'ids_{}_{}.csv'.format(label, method)), index=False)
       
         X_cur = X[idx]
         selector = VarianceThreshold() 
         X_cur = selector.fit_transform(X_cur)
-        """ 
         features = pd.DataFrame(X_cur, columns=columns[selector.get_support()])
         features.to_csv(os.path.join(data_dir, 'features_{}_{}.csv'.format(label, method)), index=False)
         labels = pd.DataFrame(Y_cur[non_na], columns=[label])
         labels.to_csv(os.path.join(data_dir, 'labels_{}_{}.csv'.format(label, method)), index=False)
-        """
         X_test = X[len(X)//2:,selector.get_support()]
         test = pd.DataFrame(X_test, columns=columns[selector.get_support()])
         test.to_csv(os.path.join(data_dir, 'test_features_{}_{}.csv'.format(label, method)), index=False)

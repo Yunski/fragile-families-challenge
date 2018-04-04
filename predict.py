@@ -20,7 +20,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     outcomes = ['gpa', 'grit', 'materialHardship', 'eviction', 'layoff', 'jobTraining']
-    predictions = [np.arange(4242)]
+    predictions = [np.arange(1, 4243)]
     for outcome in outcomes:
         print("Generating predictions for {}...".format(outcome))
         train_features_path = 'features_{}_{}.csv'.format(outcome, args.imp_method)
@@ -54,5 +54,6 @@ if __name__ == '__main__':
     
     predictions = np.array(predictions).T
     pred_df = pd.DataFrame(data=predictions, columns=['challengeID']+outcomes)
+    pred_df['challengeID'] = pred_df['challengeID'].astype('int64')
     pred_df.to_csv(os.path.join(args.results_dir, 'prediction.csv'), index=False)
 

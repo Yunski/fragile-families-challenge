@@ -1,5 +1,6 @@
 import argparse
 import glob
+import h5py
 import json
 import os
 
@@ -37,6 +38,16 @@ def display(results_dir):
     knn_df.to_csv(os.path.join(results_dir, 'results_knn.csv'), index=False)
     mode_df.to_csv(os.path.join(results_dir, 'results_mode.csv'), index=False)
     """
+    imp_method = 'Mode'
+    for outcome in outcome_id.keys():
+        for fs_method in fs_id.keys():
+            if fs_method == 'None' or fs_method == 'PCA':
+                continue
+            print("Features for outcome {}: method: {}".format(outcome, fs_method))
+            X = pd.read_csv('data/features_{}_{}.csv'.format(outcome, imp_method), low_memory=False)
+            with h5py.File('data/feature_subset_{}_{}_{}.h5'.format(outcome, fs_method, imp_method), 'r') as hf:
+                features = hf[fs_method][:]
+                print(X.columns[features])
 
 
 if __name__ == '__main__':
